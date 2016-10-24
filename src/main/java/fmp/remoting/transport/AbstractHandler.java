@@ -7,7 +7,7 @@ import fmp.remoting.ChannelHandler;
 import fmp.remoting.RemotingException;
 import fmp.remoting.util.Close;
 
-final class AbstractHandler<T> implements ChannelHandler<T> {
+class AbstractHandler<T> implements ChannelHandler<T> {
 
     private final ChannelHandler<T> handler;
     private final Close endpoint;

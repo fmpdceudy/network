@@ -35,8 +35,7 @@ public abstract class AbstractChannel<T> implements Channel {
         }
 
         private void remove( T ch ) {
-            if( ch != null )
-                map.keySet().stream().filter( ch::equals ).filter( canremove ).forEach( map::remove );
+            map.keySet().stream().filter( ch::equals ).filter( canremove ).forEach( map::remove );
         }
 
         private boolean isthis( Class<?> ch ) {
@@ -85,8 +84,6 @@ public abstract class AbstractChannel<T> implements Channel {
 
     @SuppressWarnings("unchecked")
     private static<T, K extends T, U extends AbstractChannel<T>> Optional<GenMap<T,U>> getGen( Class<K> cl) {
-        if( cl == null )
-            return Optional.empty();
         return genlist.stream().filter( l -> l.isthis( cl )).findFirst().map( t -> (GenMap<T,U>)t);
     }
 
@@ -96,6 +93,10 @@ public abstract class AbstractChannel<T> implements Channel {
 
     public static<T,K extends T> void remove( K ch ) {
         AbstractChannel.getGen( ch ).ifPresent( t -> t.remove( ch ));
+    }
+
+    public static<T,K extends T> void autoremove( Class<K> ch ) {
+        AbstractChannel.getGen( ch ).ifPresent( GenMap::autoremove );
     }
 
     public static<T, K extends T, U extends AbstractChannel<T>> Optional<U> getChannel( Class<K> cl, Addr addr ) {

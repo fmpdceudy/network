@@ -1,6 +1,5 @@
 package fmp.remoting.transport.netty;
 
-import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -27,7 +26,6 @@ public class NettyClient<T> extends AbstractClient<T> {
                                                                                            Executors.newCachedThreadPool(new NamedThreadFactory("NettyClientWorker", true)), 
                                                                                            50);
     private ClientBootstrap bootstrap;
-    private volatile Channel channel;
 
     public NettyClient( Addr addr, final ChannelHandler<T> handler) throws RemotingException{
         super(addr, handler);
@@ -57,26 +55,15 @@ public class NettyClient<T> extends AbstractClient<T> {
             if (ret && future.isSuccess()) {
                 Channel newChannel = future.getChannel();
                 newChannel.setInterestOps(Channel.OP_READ_WRITE);
-                try {
-                    Channel oldChannel = NettyClient.this.channel;
-                    if (oldChannel != null) {
-                        try {
-                            oldChannel.close();
-                        } finally {
-                            NettyChannel.remove(oldChannel);
-                        }
+                if (NettyClient.this.isClosed()) {
+                    try {
+                        newChannel.close();
+                    } finally {
+                        NettyClient.this.channel.set( null );
+                        NettyChannel.remove(newChannel);
                     }
-                } finally {
-                    if (NettyClient.this.isClosed()) {
-                        try {
-                            newChannel.close();
-                        } finally {
-                            NettyClient.this.channel = null;
-                            NettyChannel.remove(newChannel);
-                        }
-                    } else {
-                        NettyClient.this.channel = newChannel;
-                    }
+                } else {
+                    NettyClient.this.channel.set( NettyChannel.getChannel( newChannel ).orElse( null ) );
                 }
             } else if (future.getCause() != null) {
                 throw new RemotingException( future.getCause().getMessage(), future.getCause() );
@@ -92,32 +79,12 @@ public class NettyClient<T> extends AbstractClient<T> {
 
     @Override
     protected void doDisConnect() throws RemotingException {
-        try {
-            if( this.isConnected() )
-                channel.disconnect();
-            NettyChannel.remove(channel);
-        } catch (Throwable t) {
-        }
+        channel.ifPresent( t -> t.disconnect() );
     }
 
     @Override
     protected void doClose() throws RemotingException {
-    }
-
-    @Override
-    protected Optional<fmp.remoting.Channel> getChannel() {
-        return Optional
-            .ofNullable( channel )
-            .filter( Channel::isConnected )
-            .<NettyChannel>flatMap( NettyChannel::getChannel )
-            .map( t -> t );
-    }
-
-    @Override
-    protected void doSend(T message) throws RemotingException {
-        Optional.ofNullable( channel ).filter( Channel::isConnected ).ifPresent(
-                ch -> ch.write( message )
-                );
+        channel.ifPresent( t -> t.close() );
     }
 
 }

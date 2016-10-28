@@ -16,6 +16,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Answers;
 import org.mockito.Mock;
+import org.unitils.inject.annotation.InjectInto;
 import org.unitils.inject.annotation.InjectIntoByType;
 import org.unitils.inject.annotation.TestedObject;
 
@@ -37,8 +38,11 @@ public class AbstractClientTest extends Base {
     @InjectIntoByType
     private Lock connectLock = new ReentrantLock();
 
-    @InjectIntoByType
-    private Holder<Boolean> closed = new Holder<Boolean>();
+    @InjectInto( property="closed" )
+    private Holder<Boolean> closed = new Holder<>();
+
+    @InjectInto( property="channel" )
+    private Holder<Channel> holder = new Holder<>();
 
     @Mock
     @InjectIntoByType
@@ -55,15 +59,13 @@ public class AbstractClientTest extends Base {
     @Test
     public void isConnected() {
         closed.set( false );
-        when( client.getChannel() )
-            .thenReturn( Optional.empty() )
-            .thenReturn( Optional.of( channel ) );
         when( channel.isConnected() )
             .thenReturn( true )
             .thenReturn( false )
             .thenReturn( true );
 
         Assert.assertFalse( client.isConnected() );
+        holder.set( channel );
         Assert.assertTrue( client.isConnected() );
         Assert.assertFalse( client.isConnected() );
         Assert.assertTrue( client.isConnected() );
@@ -105,7 +107,6 @@ public class AbstractClientTest extends Base {
                     disconnect++;
             }
             check( doOpen != null, open, close, 0, disconnect );
-            verify( client, times(0)).getChannel();
 
         }
     }
@@ -132,7 +133,6 @@ public class AbstractClientTest extends Base {
             if( !closebefore )
                 disconnect++;
             check( true, 0, close, 0, disconnect );
-            verify( client, times(0)).getChannel();
 
         }
     }
@@ -142,9 +142,8 @@ public class AbstractClientTest extends Base {
         int close = 0;
         int connect = 0;
         int disconnect = 0;
-        int isconn = 0;
         RuntimeException run = new RuntimeException();
-        when( client.getChannel() ).thenReturn( Optional.of( channel ));
+        holder.set( channel );
         for (Boolean closebefore : Arrays.asList( Boolean.TRUE, Boolean.FALSE) )
         for (Boolean connected : Arrays.asList( Boolean.TRUE, Boolean.FALSE) )
         for (Throwable doOpen : Arrays.asList( null, remoteException, run) )
@@ -169,9 +168,6 @@ public class AbstractClientTest extends Base {
                 }
             }
             check( !connected && doConnect != null || closebefore, 0, close, connect, disconnect );
-            if( !closebefore )
-                isconn ++;
-            verify( client, times( isconn )).getChannel();
         }
     }
 
@@ -195,7 +191,6 @@ public class AbstractClientTest extends Base {
             if( !closebefore )
                 disconnect ++;
             check( closebefore, 0, 0, 0, disconnect );
-            verify( client, times(0)).getChannel();
         }
     }
 
@@ -205,31 +200,27 @@ public class AbstractClientTest extends Base {
         verify( client, times( doClose ) ).doClose();
         verify( client, times( doConnect ) ).doConnect();
         verify( client, times( doDisConnect ) ).doDisConnect();
-        verify( client, times(0)).doSend(any(String.class));
+        verify( channel, times(0)).write(any(String.class));
     }
 
     @Test
     public void send() throws RemotingException {
         closed.set( false );
-        when( client.getChannel() )
-            .thenReturn( Optional.of( channel ) );
+        holder.set( channel );
         when( channel.isConnected() ).thenReturn( false ).thenReturn( true );
         client.send( "aaaa" );
-        verify( client, times( 0) ).doSend( "aaaa" );
+        verify( channel, times( 1) ).write( "aaaa" );
         client.send( "aaaa" );
-        verify( client ).doSend( "aaaa" );
+        verify( channel, times( 2) ).write( "aaaa" );
     }
 
     @Test
     public void getAddr() {
-        when( client.getChannel() )
-            .thenReturn( Optional.empty() )
-            .thenReturn( Optional.empty() )
-            .thenReturn( Optional.of( channel ) );
         when( channel.getRemoteAddress() ).thenReturn( Optional.of( addr ) );
         when( channel.getLocalAddress() ).thenReturn( Optional.of( addr ) );
         Assert.assertEquals( false, client.getRemoteAddress().isPresent() );
         Assert.assertEquals( false, client.getLocalAddress().isPresent() );
+        holder.set( channel );
         Assert.assertEquals( addr, client.getRemoteAddress().get() );
         Assert.assertEquals( addr, client.getLocalAddress().get() );
         when( channel.getRemoteAddress() ).thenReturn( Optional.empty() );

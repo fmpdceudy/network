@@ -1,7 +1,9 @@
 package fmp.common.util;
 
-import java.util.function.Supplier;
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class Holder<T> {
 
@@ -19,7 +21,21 @@ public class Holder<T> {
         return check( ()->value );
     }
 
-    private T check(Supplier<T> su ) {
+    public Optional<T> getO() {
+        return check( () -> Optional.ofNullable( value ) );
+    }
+
+    public void ifPresent( Consumer<? super T> consumer ) {
+        try {
+            lock.lock();
+            if( value != null )
+                consumer.accept( value );
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private<M> M check(Supplier<M> su ) {
         try {
             lock.lock();
             return su.get();

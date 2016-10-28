@@ -89,6 +89,6 @@ public class NettyServer<T> extends AbstractServer<T> implements Server<T> {
 
     @Override
     public Collection<fmp.remoting.Channel> getChannels() {
-        return NettyChannel.getChannels( Channel.class ).stream().map( t -> t ).collect( Collectors.toList() );
+        return NettyChannel.getChannels( Channel.class ).stream().collect( Collectors.toList() );
     }
 }

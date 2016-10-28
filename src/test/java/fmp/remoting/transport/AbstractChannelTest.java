@@ -131,4 +131,5 @@ class U extends AbstractChannel<T> {
     public void disconnect(){}
     public boolean isConnected() { return true; }
     protected Addr getAddr() { return channel.getAddr(); }
+    public void write(Object mess) {}
 }

@@ -5,6 +5,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import fmp.common.Addr;
+import fmp.common.util.Holder;
 import fmp.remoting.Channel;
 import fmp.remoting.ChannelHandler;
 import fmp.remoting.Client;
@@ -15,6 +16,8 @@ public abstract class AbstractClient<T> extends AbstractEndpoint<T> implements C
     private final Lock connectLock = new ReentrantLock();
 
     protected final Addr addr;
+
+    protected final Holder<Channel> channel = new Holder<>();
 
     public AbstractClient( Addr addr, ChannelHandler<T> handler) {
         super(handler);
@@ -87,17 +90,16 @@ public abstract class AbstractClient<T> extends AbstractEndpoint<T> implements C
 
     @Override
     public final void send(T message) throws RemotingException {
-        if (!isConnected()) {
-            return;
-        }
-        doSend( message );
+        channel.ifPresent( t -> t.write( message ) );
+    }
+
+    private final Optional<Channel> getChannel() {
+        return channel.getO();
     }
 
     protected abstract void doOpen() throws RemotingException;
     protected abstract void doClose() throws RemotingException;
     protected abstract void doConnect() throws RemotingException;
     protected abstract void doDisConnect() throws RemotingException;
-    protected abstract void doSend( T message) throws RemotingException;
-    protected abstract Optional<Channel> getChannel();
 
 }

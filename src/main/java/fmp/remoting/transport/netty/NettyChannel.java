@@ -3,7 +3,6 @@ package fmp.remoting.transport.netty;
 import java.util.Optional;
 
 import fmp.common.Addr;
-import fmp.remoting.RemotingException;
 import fmp.remoting.transport.AbstractChannel;
 
 final class NettyChannel extends AbstractChannel<org.jboss.netty.channel.Channel> {
@@ -82,15 +81,6 @@ final class NettyChannel extends AbstractChannel<org.jboss.netty.channel.Channel
         }
     }
 
-    public void send(Object message) throws RemotingException {
-        try {
-            if( isConnected() )
-                channel.write( message ).await();
-        } catch (Exception e) {
-            throw new RemotingException( this, e );
-        }
-    }
-
     @Override
     public void connect() {
     }
@@ -102,6 +92,12 @@ final class NettyChannel extends AbstractChannel<org.jboss.netty.channel.Channel
     @Override
     public Addr getAddr() {
         return new Addr( channel.getRemoteAddress() );
+    }
+
+    @Override
+    public void write(Object message) {
+        if( isConnected() )
+            channel.write( message );
     }
 
 }
